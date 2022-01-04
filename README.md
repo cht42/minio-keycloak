@@ -45,6 +45,9 @@ Launch Keycloak (`docker-compose up -d keycloak`) and go to admin console: `loca
   - Click on `minio`
     - Settings
     - Change `Access Type` to `confidential`.
+    - Set `Service Accounts Enabled` to `On`
+    - Set `Valid Redirect URIs` to `*`
+    - Expand `Advanced Settings` and set `Access Token Lifespan` to `1 Hours`
     - Save
   - Click on credentials tab
     - Copy the `Secret` to clipboard.
@@ -55,12 +58,6 @@ Launch Keycloak (`docker-compose up -d keycloak`) and go to admin console: `loca
   - Click on the user
   - Attribute, add a new attribute `Key` is `policy`, `Value` is name of the `policy` on MinIO (ex: `readwrite`)
   - Add and Save
-
-- Go to Clients
-
-  - Click on `minio`
-  - Settings, set `Valid Redirect URIs` to `*`, expand `Advanced Settings` and set `Access Token Lifespan` to `1 Hours`
-  - Save
 
 - Go to Clients
 
@@ -95,7 +92,7 @@ Launch Keycloak (`docker-compose up -d keycloak`) and go to admin console: `loca
   - Add new Role `admin` with Description `${role_admin}`.
   - Add this Role into compositive role named `default-roles-master`. This role is automatically trusted in the 'Service Accounts' tab.
 
-- Check that `account` client_id has the role 'admin' assigned in the "Service Account Roles" tab.
+- Check that `minio` client_id has the role 'admin' assigned in the "Service Account Roles" tab.
 
 ## Launch Minio
 
