@@ -23,6 +23,11 @@ MINIO_IDENTITY_OPENID_CLIENT_SECRET= # Keycloak client secret from section above
 
 ## Certificates
 
+If you need plan to run this keycloak/minio setup on a remote machine, make sure to edit the following `openssl` 
+command in the `setup_certs.sh` to generate certificates valid for this domain:
+```bash
+openssl x509 -req -extfile <(printf "subjectAltName=IP:127.0.0.1,IP:172.17.0.1,IP:HERE.YOUR.IP") -in certs/keycloak/keycloak.csr ...
+```
 Run the `setup_certs.sh` script to generate Keycloak certificates
 
 ```bash
