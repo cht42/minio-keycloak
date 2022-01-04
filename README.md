@@ -85,7 +85,7 @@ Launch Keycloak (`docker-compose up -d keycloak`) and go to admin console: `loca
     - `Mapper Type` is `Audience`
     - `Included Client Audience` is `security-admin-console`
   - Save
-
+  
 - Go to Clients
 
   - Click on `minio`
@@ -98,7 +98,120 @@ Launch Keycloak (`docker-compose up -d keycloak`) and go to admin console: `loca
   - Add this Role into compositive role named `default-roles-master`. This role is automatically trusted in the 'Service Accounts' tab.
 
 - Check that `minio` client_id has the role 'admin' assigned in the "Service Account Roles" tab.
-
 ## Launch Minio
 
 Launch Minio (`docker-compose up -d`). Go to minio console home page: `http://172.17.0.1:9001`. Click on `Login with SSO`. You will be redirected to Keycloak to login. Once you login you will be redirected back to Minio.
+
+## Custom access policies
+
+We are going to simulate a scenario where you have two users: Alice and Bob with two buckets: A and B. Alice with all full read and write access to bucket A and B but Bob only read to bucket A.
+
+### Create users
+
+Go to Keycloak
+
+- Go to Users
+
+  - Add user
+  - Username: `Alice`
+  - Save
+  - Go to Credentials
+    - Fill password & password confirmation field
+    - Uncheck `Temporary`
+    - Set Password
+  - Go to attributes
+    - Add attribute with key: `policy` value: `minioSuperuser`
+    - Save
+
+- Go to Users
+  - Add user
+  - Username: `Bob`
+  - Save
+  - Go to Credentials
+    - Fill password & password confirmation field
+    - Uncheck `Temporary`
+    - Set Password
+  - Go to attributes
+    - Add attribute with key: `policy` value: `minioUser`
+    - Save
+
+### Create buckets and custom policies
+
+We are going to use Minio Client to create buckets and the policies.
+
+```bash
+docker pull minio/mc
+docker run -it --rm --entrypoint=/bin/bash minio/mc
+```
+
+Add your minio server:
+
+```bash
+mc config host add minio http://172.17.0.1:9000 <MINIO_ROOT_USER> <MINIO_ROOT_PASSWORD>
+```
+
+Create buckets and put stuff inside:
+
+```bash
+mc mb minio/bucket-a
+mc mb minio/bucket-b
+
+echo "hello world!" > hello.txt
+mc cp hello.txt minio/bucket-a/hello.a.txt
+mc cp hello.txt minio/bucket-b/hello.b.txt
+```
+
+Create custom policies:
+
+```bash
+cat > minio_superuser.json << EOFL
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Action": [
+        "s3:ListBucket",
+        "s3:GetObject",
+        "s3:PutObject",
+        "s3:DeleteObject",
+        "s3:GetBucketLocation"
+      ],
+      "Effect": "Allow",
+      "Resource": [
+        "arn:aws:s3:::bucket-a/*",
+        "arn:aws:s3:::bucket-b/*"
+      ],
+      "Sid": ""
+    }
+  ]
+}
+EOF
+
+cat > minio_user.json << EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Action": [
+        "s3:ListBucket",
+        "s3:GetObject",
+        "s3:PutObject",
+        "s3:GetBucketLocation",
+      ],
+      "Effect": "Allow",
+      "Resource": [
+        "arn:aws:s3:::bucket-a/*"
+      ],
+      "Sid": ""
+    }
+  ]
+}
+EOF
+
+mc admin policy add minio minioSuperuser minio_superuser.json
+mc admin policy add minio minioUser minio_user.json
+```
+
+You can now access Minio Console and login with either Alice or Bob. You will see only bucket A for Bob and both buckets for Alice.
+
+To learn more on how to design custom policies: https://docs.min.io/minio/baremetal/security/minio-identity-management/policy-based-access-control.html#minio-policy-actions.
