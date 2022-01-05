@@ -23,6 +23,11 @@ MINIO_IDENTITY_OPENID_CLIENT_SECRET= # Keycloak client secret from section above
 
 ## Certificates
 
+If you need plan to run this keycloak/minio setup on a remote machine, make sure to edit the following `openssl` 
+command in the `setup_certs.sh` to generate certificates valid for this domain:
+```bash
+openssl x509 -req -extfile <(printf "subjectAltName=IP:127.0.0.1,IP:172.17.0.1,IP:HERE.YOUR.IP") -in certs/keycloak/keycloak.csr ...
+```
 Run the `setup_certs.sh` script to generate Keycloak certificates
 
 ```bash
@@ -45,6 +50,9 @@ Launch Keycloak (`docker-compose up -d keycloak`) and go to admin console: `loca
   - Click on `minio`
     - Settings
     - Change `Access Type` to `confidential`.
+    - Set `Service Accounts Enabled` to `On`
+    - Set `Valid Redirect URIs` to `*`
+    - Expand `Advanced Settings` and set `Access Token Lifespan` to `1 Hours`
     - Save
   - Click on credentials tab
     - Copy the `Secret` to clipboard.
@@ -55,12 +63,6 @@ Launch Keycloak (`docker-compose up -d keycloak`) and go to admin console: `loca
   - Click on the user
   - Attribute, add a new attribute `Key` is `policy`, `Value` is name of the `policy` on MinIO (ex: `readwrite`)
   - Add and Save
-
-- Go to Clients
-
-  - Click on `minio`
-  - Settings, set `Valid Redirect URIs` to `*`, expand `Advanced Settings` and set `Access Token Lifespan` to `1 Hours`
-  - Save
 
 - Go to Clients
 
@@ -83,20 +85,19 @@ Launch Keycloak (`docker-compose up -d keycloak`) and go to admin console: `loca
     - `Mapper Type` is `Audience`
     - `Included Client Audience` is `security-admin-console`
   - Save
-
-- Go to Roles
-
-  - Add new Role `admin` with Description `${role_admin}`.
-  - Add this Role into compositive role named `default-roles-master`. This role is automatically trusted in the 'Service Accounts' tab.
-
+  
 - Go to Clients
 
   - Click on `minio`
   - Service Accounts Roles
   - Add `admin` to assigned roles
 
-- Check that `account` client_id has the role 'admin' assigned in the "Service Account Roles" tab.
+- Go to Roles
 
+  - Add new Role `admin` with Description `${role_admin}`.
+  - Add this Role into compositive role named `default-roles-master`. This role is automatically trusted in the 'Service Accounts' tab.
+
+- Check that `minio` client_id has the role 'admin' assigned in the "Service Account Roles" tab.
 ## Launch Minio
 
 Launch Minio (`docker-compose up -d`). Go to minio console home page: `http://172.17.0.1:9001`. Click on `Login with SSO`. You will be redirected to Keycloak to login. Once you login you will be redirected back to Minio.
