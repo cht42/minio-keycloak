@@ -20,6 +20,10 @@ x-minio-common: &minio-common
     interval: 30s
     timeout: 20s
     retries: 3
+  depends_on:
+    keycloak:
+      condition: service_healthy
+
 
 
 # starts 4 docker containers running minio server instances.
@@ -90,6 +94,11 @@ services:
       - 8443:8443
     depends_on:
       - postgres
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/auth/realms/master"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
 
   postgres:
     image: postgres
